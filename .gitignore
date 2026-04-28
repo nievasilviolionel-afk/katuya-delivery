@@ -1,0 +1,31 @@
+# Firebase
+google-services.json
+GoogleService-Info.plist
+.firebase/
+
+# Flutter
+build/
+.dart_tool/
+*.iml
+.metadata
+android/app/google-services.json
+
+# Node
+node_modules/
+lib/
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets & Keys
+*.pem
+*.key
+secrets/

@@ -1,0 +1,71 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function hasRole(r) {
+      return isSignedIn() && request.auth.token.role == r;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ============================================
+    // Driver KYC Documents
+    // ============================================
+    match /drivers/{driverId}/documents/{documentType} {
+      allow read: if isAdmin() || isOwner(driverId);
+      allow write: if isAdmin() || isOwner(driverId);
+    }
+
+    // ============================================
+    // Driver Profile Photos
+    // ============================================
+    match /drivers/{driverId}/profile/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isOwner(driverId);
+    }
+
+    // ============================================
+    // Merchant Logos / Business Images
+    // ============================================
+    match /merchants/{merchantId}/{fileName} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || (hasRole('merchant') && request.auth.token.merchantId == merchantId);
+    }
+
+    // ============================================
+    // Order Attachments (delivery photos, signatures)
+    // ============================================
+    match /orders/{orderId}/{fileName} {
+      allow read: if isAdmin()
+                   || (hasRole('merchant') && resource.metadata.merchantId == request.auth.token.merchantId)
+                   || (hasRole('driver') && resource.metadata.driverId == request.auth.uid);
+      allow write: if isAdmin()
+                    || (hasRole('driver') && request.auth.uid == resource.metadata.driverId);
+    }
+
+    // ============================================
+    // Public Assets (logos, branding)
+    // ============================================
+    match /public/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // Deny by Default
+    // ============================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

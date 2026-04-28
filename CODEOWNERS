@@ -1,0 +1,20 @@
+# https://github.com/SilvioLionelNieva/katuya
+
+# Global
+* @silviolionelnieva
+
+# Backend & Infrastructure
+/backend/ @silviolionelnieva
+/infra/ @silviolionelnieva
+/.github/ @silviolionelnieva
+
+# Flutter Apps
+/apps/commerce_app/ @silviolionelnieva
+/apps/driver_app/ @silviolionelnieva
+/packages/ @silviolionelnieva
+
+# Admin Panel
+/apps/admin_panel/ @silviolionelnieva
+
+# Documentation
+/docs/ @silviolionelnieva

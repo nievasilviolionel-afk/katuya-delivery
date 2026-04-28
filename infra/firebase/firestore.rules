@@ -1,0 +1,212 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // Helper Functions
+    // Katuya — by Silvio Lionel Nieva
+    // ============================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function authUid() {
+      return request.auth.uid;
+    }
+
+    function hasRole(r) {
+      return isSignedIn() && request.auth.token.role == r;
+    }
+
+    function merchantId() {
+      return request.auth.token.merchantId;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && authUid() == uid;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isMerchant() {
+      return hasRole('merchant');
+    }
+
+    function isDriver() {
+      return hasRole('driver');
+    }
+
+    function belongsToMerchant(docMerchantId) {
+      return isMerchant() && merchantId() == docMerchantId;
+    }
+
+    function isAssignedDriver(docDriverId) {
+      return isDriver() && authUid() == docDriverId;
+    }
+
+    function validTimestamp() {
+      return request.time;
+    }
+
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function isValidOrderStatus(status) {
+      return status in ['created', 'searching', 'assigned', 'picked_up', 'delivered', 'canceled', 'expired'];
+    }
+
+    function isValidDriverStatus(status) {
+      return status in ['offline', 'online', 'busy', 'suspended'];
+    }
+
+    function isValidVehicleType(type) {
+      return type in ['bike', 'motorcycle', 'car'];
+    }
+
+    // ============================================
+    // Users Collection
+    // ============================================
+    match /users/{userId} {
+      allow read: if isAdmin() || isOwner(userId);
+      allow create: if isAdmin() || (isSignedIn() && isOwner(userId));
+      allow update: if isAdmin() || isOwner(userId);
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // Merchants Collection
+    // ============================================
+    match /merchants/{merchantId} {
+      allow read: if isAdmin() || belongsToMerchant(merchantId);
+      allow create: if isAdmin();
+      allow update: if isAdmin() || belongsToMerchant(merchantId);
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // Drivers Collection
+    // ============================================
+    match /drivers/{driverId} {
+      // Drivers can read/write their own profile
+      // Merchants can read driver online status & location (for assignment)
+      // Admins can read all
+      allow read: if isAdmin() || isMerchant() || isAssignedDriver(driverId);
+      allow create: if isAdmin() || isAssignedDriver(driverId);
+      allow update: if isAdmin() || isAssignedDriver(driverId);
+      allow delete: if isAdmin();
+
+      // Driver location history subcollection
+      match /track/{timestamp} {
+        allow read: if isAdmin() || isAssignedDriver(driverId);
+        allow write: if isAssignedDriver(driverId);
+      }
+    }
+
+    // ============================================
+    // Orders Collection
+    // ============================================
+    match /orders/{orderId} {
+      allow read: if isAdmin()
+                   || belongsToMerchant(resource.data.merchantId)
+                   || isAssignedDriver(resource.data.assignedDriverId);
+      allow create: if isMerchant()
+                     && request.resource.data.merchantId == merchantId()
+                     && hasRequiredFields(request.resource.data, ['merchantId', 'pickup', 'dropoff', 'status', 'createdAt']);
+      allow update: if isAdmin()
+                     || belongsToMerchant(resource.data.merchantId)
+                     || isAssignedDriver(resource.data.assignedDriverId);
+      allow delete: if isAdmin();
+
+      // Order timeline subcollection (audit trail)
+      match /timeline/{eventId} {
+        allow read: if isAdmin()
+                     || belongsToMerchant(resource.data.merchantId)
+                     || isAssignedDriver(resource.data.assignedDriverId);
+        allow write: if isAdmin()
+                      || belongsToMerchant(resource.data.merchantId)
+                      || isAssignedDriver(resource.data.assignedDriverId);
+      }
+    }
+
+    // ============================================
+    // Order Offers / Driver Offers
+    // ============================================
+    match /offers/{offerId} {
+      allow read: if isAdmin()
+                   || (isDriver() && resource.data.driverId == authUid())
+                   || (isMerchant() && resource.data.merchantId == merchantId());
+      allow create: if isAdmin();
+      allow update: if isAdmin()
+                     || (isDriver() && resource.data.driverId == authUid());
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // Chats Collection
+    // ============================================
+    match /chats/{chatId} {
+      // chatId format: order_{orderId}
+      allow read: if isAdmin()
+                   || (isMerchant() && resource.data.merchantId == merchantId())
+                   || (isDriver() && resource.data.driverId == authUid());
+      allow create: if isAdmin()
+                     || isMerchant()
+                     || isDriver();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isAdmin()
+                     || (isMerchant() && get(/databases/$(database)/documents/chats/$(chatId)).data.merchantId == merchantId())
+                     || (isDriver() && get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == authUid());
+        allow create: if isAdmin()
+                       || (isMerchant() && get(/databases/$(database)/documents/chats/$(chatId)).data.merchantId == merchantId())
+                       || (isDriver() && get(/databases/$(database)/documents/chats/$(chatId)).data.driverId == authUid());
+        allow update, delete: if false;
+      }
+    }
+
+    // ============================================
+    // Ratings Collection
+    // ============================================
+    match /ratings/{ratingId} {
+      allow read: if isAdmin()
+                   || (isMerchant() && resource.data.merchantId == merchantId())
+                   || (isDriver() && resource.data.driverId == authUid());
+      allow create: if isAdmin()
+                     || (isMerchant() && request.resource.data.merchantId == merchantId())
+                     || (isDriver() && request.resource.data.driverId == authUid());
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // Payouts Collection
+    // ============================================
+    match /payouts/{payoutId} {
+      allow read: if isAdmin() || (isDriver() && resource.data.driverId == authUid());
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ============================================
+    // Notifications (Audit/Debug)
+    // ============================================
+    match /notifications/{notificationId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ============================================
+    // Deny by Default
+    // ============================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
