@@ -28,7 +28,7 @@ dependencies:
   cloud_firestore: ^4.14.0
   firebase_messaging: ^14.7.10
   firebase_crashlytics: ^3.4.9
-  firebase_performance: ^0.9.3+7
+  firebase_storage: ^11.6.0
 
   # State Management
   flutter_riverpod: ^2.4.9
@@ -41,6 +41,12 @@ dependencies:
   google_maps_flutter_web: ^0.5.4+2
   geolocator: ^10.1.0
   geocoding: ^2.1.1
+
+  # Google Sign-In
+  google_sign_in: ^6.2.1
+  
+  # URL Launcher
+  url_launcher: ^6.2.4
 
   # UI
   shimmer: ^3.0.0
