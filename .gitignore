@@ -1,31 +1,54 @@
-# Firebase
-google-services.json
-GoogleService-Info.plist
-.firebase/
-
-# Flutter
-build/
+```
+# Flutter/Dart
 .dart_tool/
-*.iml
-.metadata
-android/app/google-services.json
+.packages
+pubspec.lock
+*.g.dart
+*.freezed.dart
 
-# Node
-node_modules/
-lib/
-.env
-.env.local
+# Build
+build/
+**/ios/Flutter/.last_build_id
+
+# Android
+android/**
+!android/**/app/build.gradle
+!android/**/build.gradle
+!android/**/gradle.properties
+!android/**/settings.gradle
+
+# Web
+web/**
 
 # IDE
-.idea/
 .vscode/
+.idea/
 *.swp
+*.swo
 
-# OS
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Coverage
+coverage/
+*.lcov
+
+# Temporary files
+*.tmp
+*~
+
+# macOS
 .DS_Store
-Thumbs.db
 
-# Secrets & Keys
-*.pem
-*.key
-secrets/
+# Windows
+Thumbs.db
+```
